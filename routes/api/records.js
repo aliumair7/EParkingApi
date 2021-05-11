@@ -1,22 +1,25 @@
 const express= require('express');
 var router=express.Router();
 var Records=require("../../models/OwnerRecords")
+var  validateownerdetails =require('../../middlewares/ValidateOwnerData');
 
 //post records of owner details against his vehicle registrationnumber
-router.post("/addrecords",async (req,res)=>{
+router.post("/addrecords",validateownerdetails,async (req,res)=>{
+    let vehicle = await Records.findOne({registrationnumber : req.body.registrationnumber });
+    if (vehicle) {return res.status("400").send("Vehicle Already Registered")}
     let records=new Records()
     records.registrationnumber=req.body.registrationnumber;
-    records.ownercnic=req.body.cnic;
-    records.ownername=req.body.name;
-    records.ownerfathername=req.body.fathername;
-    records.owneraddress=req.body.address;
-    records.onwermobilenumber=req.body.mobilenumber;
-    records.onwergmail=req.body.gmail;
+    records.ownercnic=req.body.ownercnic;
+    records.ownername=req.body.ownername;
+    records.ownerfathername=req.body.ownerfathername;
+    records.owneraddress=req.body.owneraddress;
+    records.ownermobilenumber=req.body.ownermobilenumber;
+    records.onwergmail=req.body.onwergmail;
     records.vehiclecolour=req.body.vehiclecolour;
     records.vehiclemodel=req.body.vehiclemodel;
     records=await records.save()
 
-    res.send(records)
+    return res.send(records)
 
 })
 
