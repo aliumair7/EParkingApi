@@ -1,0 +1,3 @@
+{
+    "db":"mongodb://admin:12345@cluster0-shard-00-00.k1kgl.mongodb.net:27017,cluster0-shard-00-01.k1kgl.mongodb.net:27017,cluster0-shard-00-02.k1kgl.mongodb.net:27017/EParking?ssl=true&replicaSet=atlas-v3l5pq-shard-0&authSource=admin&retryWrites=true&w=majority"
+}
