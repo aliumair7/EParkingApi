@@ -273,6 +273,7 @@ router.post("/add",async(req,res)=>{
     challan.latitude=req.body.latitude;
     challan.longitude=req.body.longitude;
     challan.wardenid=req.body.wardenid;
+    challan.picid=req.body.imgid;
     challan.challanid=req.body.challanid;
     await challan.save();
     return res.send(challan);

@@ -10,6 +10,7 @@ var challanSchema=mongoose.Schema({
     ownernumber:Number,
     city:String,
     amount:Number,
+    picid:String,
     latitude:Number,
     longitude :Number,
     wardenid:Number,
