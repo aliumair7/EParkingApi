@@ -2,6 +2,7 @@ const express= require('express');
 var router=express.Router();
 var Records=require("../../models/OwnerRecords")
 var Challans=require("../../models/challan");
+var fs=require('fs');
 var Payment=require("../../models/Payment")
 const multipart = require('connect-multiparty');
 const cloudinary = require('cloudinary');
@@ -14,7 +15,7 @@ var nodemailer=require('nodemailer')
 var sendgrid=require('nodemailer-sendgrid-transport')
 //var CloudmersiveValidateApiClient = require('cloudmersive-validate-api-client');
 var CloudmersiveImageApiClient = require('cloudmersive-image-api-client');
-const { result } = require('lodash');
+const { result, sample } = require('lodash');
 const { findByIdAndDelete, findById } = require('../../models/OwnerRecords');
 //const { createDiffieHellman } = require('node:crypto');
 const multipartMiddleware = multipart();
@@ -146,7 +147,7 @@ cloudinary.config({
 //get dummy record
 router.post('/dummy',async(req,res)=>{
   console.log(req.body)
-  let postrecords="LER188486"
+  let postrecords="LEB065700"
   let record=await Records.findOne({registrationnumber:postrecords})
   console.log(record)
  if(!record){
@@ -160,12 +161,12 @@ else{
 
 
 //get the records against the photo of vehicle
-router.post('/uploader',async(req, res)=> {
+router.post('/uploader',multipartMiddleware,async(req, res)=> {
     //req.files.image.path
     //req.body.url
-    console.log(req.body)
-    //console.log(req.files.image.path)
-    cloudinary.v2.uploader.upload(req.body.photo,
+   // console.log(req.body)
+    console.log(req.files.null.path)
+    cloudinary.v2.uploader.upload(req.files.null.path,
       {
         ocr: "adv_ocr"
       }, function(error, result) {
@@ -332,10 +333,10 @@ else{
 
 //update payemnt when payment succcesfully then update pending staus of challan to paid
 router.put("/updation/:id",async(req,res)=>{
-console.log(req.bod)
+console.log(req.body.challan)
   
   stripe.customers.create({
-    email:'ali@gmail.com',
+    email:req.body.challan.ownergmail,
     source:req.body.tokenId
   }).then(customer=>{
   
@@ -416,21 +417,38 @@ const transporter=nodemailer.createTransport(sendgrid({
 
 
 //padf file send via challan
-router.post('/pdfuploader',(req,res)=>{
-console.log(req.body.bases)
+router.post('/pdfuploader',multipartMiddleware,(req,res)=>{
+console.log(req.files.file.path)
   
-var base64File = encode.encode(req.body.bases, 'base64');
-console.log(base64File)
-  transporter.sendMail({
-    to:"mhabibajmal@gmail.com",
-    from:"fa17-bcs-003@cuilahore.edu.pk",
-    subject:"request password code",
-    html:`<h1>Password reset email </h1>`,
-    attachments:[{content:base64File,filename:'MYChallan.pdf'}]
+/*var base64File = encode.encode(req.files.file.path, 'base64');
+console.log(base64File) */
+  
+    fs.readFile(req.files.file.path,function(err,data){
+      var mailOptions={
+      from:"fa17-bcs-003@cuilahore.edu.pk",
+      to:"aliumair.ajmal@gmail.com",
+      subject:'Sample mail',
+      text:'Hello!!!!!!!!!!!!!',
+      attachments:[
+      {
+          'filename':'sample.pdf',//metion the filename with extension
+           'content': data,
+           'contentType':'application/pdf'//type indicates file type like pdf,jpg,...
+      }]
+      }
+      transporter.sendMail(mailOptions,function(err,res){
+      if(err){
+          console.log('Error');
+      }
+      else{
+      console.log('Email Sent');
+      }
+  
  
      
+   
+    })
   })
-  res.send("check you email")
 
 })
 
@@ -535,5 +553,21 @@ router.post("/newch" ,async function(req, res) {
       
    
 });
+
+
+router.post("/tesscartimage",multipartMiddleware,(req,res)=>{
+  console.log(req.files.null.path)
+  Tesseract.recognize(
+    req.files.null.path,
+    'eng',
+    { logger: m => console.log(m) }
+  )
+.then(({ data: { text } }) => {
+  console.log(text);
+  res.send(text)
+}) 
+
+
+})
 
 module.exports=router;
