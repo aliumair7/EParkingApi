@@ -16,6 +16,7 @@ var challanSchema=mongoose.Schema({
     wardenid:Number,
     challanid:String,
     cardId:String,
+    placename:String,
     issueDate:{
         type:Date,
         default:Date.now()

@@ -7,6 +7,13 @@ var  validateownerdetails =require('../../middlewares/ValidateOwnerData');
 router.post("/addrecords",validateownerdetails,async (req,res)=>{
     let vehicle = await Records.findOne({registrationnumber : req.body.registrationnumber });
     if (vehicle) {return res.status("400").send("Vehicle Already Registered")}
+    if(!req.body.registrationnumber || !req.body.ownercnic || !req.body.ownername 
+        || !req.body.ownerfathername || !req.body.owneraddress
+        || !req.body.ownermobilenumber || !req.body.ownergmail ||!req.body.vehiclecolour ||!req.body.vehiclemodel)
+        {
+        return res.status("401").send("Fill all fields")
+      }
+
     let records=new Records()
     records.registrationnumber=req.body.registrationnumber;
     records.ownercnic=req.body.ownercnic;
@@ -14,13 +21,13 @@ router.post("/addrecords",validateownerdetails,async (req,res)=>{
     records.ownerfathername=req.body.ownerfathername;
     records.owneraddress=req.body.owneraddress;
     records.ownermobilenumber=req.body.ownermobilenumber;
-    records.onwergmail=req.body.onwergmail;
+    records.onwergmail=req.body.ownergmail;
     records.vehiclecolour=req.body.vehiclecolour;
     records.vehiclemodel=req.body.vehiclemodel;
     records=await records.save()
 
     return res.send(records)
-
+      
 })
 
 

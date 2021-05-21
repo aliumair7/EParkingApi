@@ -40,6 +40,9 @@ router.post("/register",wardenvalidator,async(req,res)=>{
     
     let warden = await Wardens.findOne({wardenid:req.body.wardenid});
     if (warden) {return res.status("400").send("Warden exists aalready with given wardenid ")}
+    if(!req.body.name || !req.body.fathername || !req.body.wardenid || !req.body.password){
+      return res.status("401").send("Fill all fields")
+    }
   
       let newwarden=new Wardens()
         newwarden.name=req.body.name;
@@ -64,9 +67,11 @@ router.post("/register",wardenvalidator,async(req,res)=>{
 //login warden with required field and generate token
 router.post("/login", async (req, res) => {
     let warden = await Wardens.findOne({ wardenid: req.body.wardenid });
-    if (!warden) return res.status(400).send("Warden Not Registered");
+    if(!req.body.wardenid || !req.body.password) return res.status(400).send("Fill all fields")
+    if (!warden) return res.status(401).send("Warden Not Registered");
+
     let isValid = await bcrypt.compare(req.body.password, warden.password);
-    if (!isValid) return res.status(401).send("Invalid Password");
+    if (!isValid) return res.status(402).send("Invalid Password");
     let token = jwt.sign(
       { _id: warden._id, name: warden.name, wardenid: warden.wardenid,role:warden.role,fathername:warden.fathername },"someprivatekey");
     res.send(token);

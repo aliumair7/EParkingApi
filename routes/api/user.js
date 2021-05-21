@@ -40,6 +40,10 @@ router.post("/register",citizenvalidater,async(req,res)=>{
     
     let user = await Users.findOne({$or:[{email:req.body.email},{idcardnumber:req.body.idcardnumber}]});
     if (user) { return res.status(400).send("User with given Email or id cardnumber already exist"); }
+    if(!req.body.name || !req.body.fathername || !req.body.idcardnumber || !req.body.phonenumber || !req.body.password
+      || !req.body.email){
+      return res.status("401").send("Fill all fields")
+    }
     
 
           let newuser=new Users()  
@@ -66,9 +70,10 @@ router.post("/register",citizenvalidater,async(req,res)=>{
 //login citizen with required field and generate tokem
 router.post("/login", async (req, res) => {
     let user = await Users.findOne({  idcardnumber: req.body.cnic });
-    if (!user) return res.status(400).send("User Not Registered");
+    if(!req.body.cnic || !req.body.password) return res.status(400).send("Enter all fields")
+    if (!user) return res.status(401).send("User Not Registered");
     let isValid = await bcrypt.compare(req.body.password, user.password);
-    if (!isValid) return res.status(401).send("Invalid Password");
+    if (!isValid) return res.status(402).send("Invalid Password");
     let token = jwt.sign(
       { _id: user._id, name: user.name, gmail: user.email,cnic:user.idcardnumber,mobile:user.phonenumber },"someprivatekey");
     res.send(token);

@@ -6,67 +6,110 @@ var fs=require('fs');
 var Payment=require("../../models/Payment")
 const multipart = require('connect-multiparty');
 const cloudinary = require('cloudinary');
-const encode = require("nodejs-base64-encode");
 const stripe = require('stripe')('sk_test_51H2YSHBx7QxnH8iBUdmg3PsmD3yWR0AzJy4aa7tqOzzhfcAIYt2BHElWPTOZ8jRNLulOv2LcxrHqtyDAVb5Wgmr2002tIoFIKp');
 const Tesseract = require('tesseract.js');
 const sharp = require('sharp');
+const Jimp = require('jimp');
 const imageDownloader = require("image-downloader");
 var nodemailer=require('nodemailer')
 var sendgrid=require('nodemailer-sendgrid-transport')
-//var CloudmersiveValidateApiClient = require('cloudmersive-validate-api-client');
-var CloudmersiveImageApiClient = require('cloudmersive-image-api-client');
-const { result, sample } = require('lodash');
-const { findByIdAndDelete, findById } = require('../../models/OwnerRecords');
-//const { createDiffieHellman } = require('node:crypto');
+
 const multipartMiddleware = multipart();
 
+//Cloudinary set up
+cloudinary.config({
+  cloud_name: 'ali7347',
+  api_key: '431387519785511',
+  api_secret: '8hvc3XL2nB2V24AdhxOUKVG7CO4'
+});
 
-//cloudmersivevalidate application
-var defaultClient = CloudmersiveImageApiClient.ApiClient.instance;
 
-// Configure API key authorization: Apikey
-var Apikey = defaultClient.authentications['Apikey'];
-Apikey.apiKey = '0f70ea61-b708-4d5e-b679-667c46c53129';
-
-var apiInstance = new CloudmersiveImageApiClient.RecognizeApi();
-router.post('/up',multipartMiddleware,(req,res)=>{
-  console.log(req.files.image.path)
-
-  apiInstance.recognizeDetectVehicleLicensePlates(req.files.image.path, function(error,data,response){
-    if(error){
-      console.log(error)
-    }else{
-      console.log('API called successfully. Returned data: ' + data);
-      res.send(data)
+var count=1;
+/* GET users listing. */
+router.post('/getrecords', function(req, res, next) {
+  console.log(req.body)
+  fs.unlink('./images/process'+count+'.png', (err) => {
+    if (err) {
+        throw err;
     }
-  });
 
+    console.log("File is deleted.");
 })
+  let link=req.body.link
+        Jimp.read(link)
+        .then(image => {
+          // Do stuff with the image.
+          return image
+      //.autocrop(leaveBorder)
+      .resize(250,Jimp.AUTO)
+      .resize(Jimp.AUTO,250)
+      
+      // resize
+       
+      .sepia() 
+      .greyscale() // set greyscale
+     
+      .posterize(200)
+     // .mask( src, x, y )
+     .contrast(0.2)
+      .color([
+        { apply: 'red', params: [50] },
+        {apply: 'green', params: [50] },
+        {apply: 'blue', params: [50] },
+       // {apply: 'shade', params: [100] },
+        //{apply: 'tint', params: [50] },
+      ])
+     
+     
+      .background(0x00000000)
+     //.fade( 0.25)
+     //.resize(Jimp.AUTO,250)
+     //.resize(250,Jimp.AUTO)
+     
+     .normalize()
+    .sepia() 
+     .write('./images/process'+count+'.png')
+        })
+        .catch(err => {
+          // Handle an exception.
+          console.error(err);
+        });
+        function myFunc() { cloudinary.v2.uploader.upload('./images/process'+count+'.png',
+          {
+            ocr: "adv_ocr"
+          }, function(error, result) {
+              
+              if( !result.info.ocr.adv_ocr.status === "complete" ) { 
 
-//var imageFile = Buffer.from(fs.readFileSync("C:\\temp\\inputfile").buffer); // File | Image file to perform the operation on.  Common file formats such as PNG, JPEG are supported.
-/*var callback = function(error, data, response) {
-  if (error) {
-    console.error(error);
-  } else {
-    console.log('API called successfully. Returned data: ' + data);
-  }
-};
+                
+              }
+            })
+             
+              .then(async result=>{
+                let records=result.info.ocr.adv_ocr.data[0].textAnnotations[0].description
+                console.log(records)
+                let newrecords=records.replace(/(\r\n|\n|\r)/gm, "");
+                let newpos= newrecords.replace(/-/g, "");
+                //let mystring=newpos.trim()
+                let mystring=newpos.split(" ").join("")
+                let dataget=mystring.slice(0,9)
+               if(!dataget){
+                 return res.status(400).send("Not fetch data correctly")
+               }
+    
+               let record=await Records.findOne({registrationnumber:dataget})
+               console.log(record)
+              if(!record){
+                  return res.status(401).send("Not found Records in database")
+              }
+             else{
+                 return  res.send(record)
+              }          
+            })
+          }
+        setTimeout(myFunc, 1500);
+});
 
-*/
-
-
-//use tesseract.js
-router.post('/ups',multipartMiddleware,(req,res)=>{
-  console.log(req.files.image.path)
-
-  Tesseract.recognize(req.files.image.path)
-      .then(function(result) {
-        console.log(result.data.text)
-       res.send(result.data.text);
-      });
-  
-
-})
 //get all unpaid agianst warden id
 router.get("/unpaidbywarden/:id",async(req,res)=>{
   let challans=await Challans.find({$and:[{wardenid: req.params.id},{status:"Pending"}]})
@@ -113,7 +156,7 @@ router.get("/:registrationnumber",async(req,res)=>{
         return res.status(400).send("INVALID entry");
     }
  });
-//get all challan ahaint citizen cnic
+//get all challan against citizen cnic
 router.get("/:ownercnic",async(req,res)=>{
     try
      { 
@@ -136,14 +179,6 @@ router.get("/:ownercnic",async(req,res)=>{
     }
  });
 
-//Cloudinary set up
-cloudinary.config({
-    cloud_name: 'ali7347',
-    api_key: '431387519785511',
-    api_secret: '8hvc3XL2nB2V24AdhxOUKVG7CO4'
-});
-
-
 //get dummy record
 router.post('/dummy',async(req,res)=>{
   console.log(req.body)
@@ -158,105 +193,6 @@ else{
  }
 
 })
-
-
-//get the records against the photo of vehicle
-router.post('/uploader',multipartMiddleware,async(req, res)=> {
-    //req.files.image.path
-    //req.body.url
-   // console.log(req.body)
-    console.log(req.files.null.path)
-    cloudinary.v2.uploader.upload(req.files.null.path,
-      {
-        ocr: "adv_ocr"
-      }, function(error, result) {
-          if( result.info.ocr.adv_ocr.status === "complete" ) {
-            let records=result.info.ocr.adv_ocr.data[0].textAnnotations[0].description
-            console.log(records)
-            let newrecords=records.replace(/(\r\n|\n|\r)/gm, "");
-            let newpos= newrecords.replace(/-/g, "");
-            //let mystring=newpos.trim()
-            let mystring=newpos.split(" ").join("")
-            let dataget=mystring.slice(0,9)
-            console.log(dataget)
-            res.send(dataget)
-           
-            
-
-           
-           // let cnicrecord=result.info.ocr.adv_ocr.data[0].textAnnotations[0].description // result.info.ocr.adv_ocr.data[0].textAnnotations[0].description (more specific)
-          }
-        })
-     
-         // let records=await Records.findOne({registrationnumber:postrecords})
-         // if(!records){
-         //      res.status(400).send("Not found Records in database")
-         // }
-         // else{
-           //   res.send(records)
-         // }
-        
-
-        
-    
-
-  }); 
-  ////////////////////////
-//this will get result from cloudinary all data will get by ocr
-  router.post('/uploads',async(req, res)=> {
-    //req.files.image.path
-    //req.body.photo
-    
-    console.log(req.body.photo)
-    cloudinary.v2.uploader.upload(req.body.photo,
-      {
-        ocr: "adv_ocr"
-      }, function(error, result) {
-          
-          if( result.info.ocr.adv_ocr.status === "complete" ) { 
-            let records=result.info.ocr.adv_ocr.data[0].textAnnotations[0].description
-            //console.log(records)
-            //let newrecords=records.replace(/(\r\n|\n|\r)/gm, "");
-            //let newpos= newrecords.replace(/-/g, "");
-            //let mystring=newpos.trim()
-            //let mystring=newpos.split(" ").join("")
-            //let dataget=mystring.slice(0,9)
-
-            //console.log(dataget)
-          // let postrecords=newrecords.slice(0,12)
-          //let newpos= postrecords.replace(/-/g, "");
-          //let newstring=newpos.trim()
-          }
-        })
-           //res.send(dataget)     
-           // let cnicrecord=result.info.ocr.adv_ocr.data[0].textAnnotations[0].description // result.info.ocr.adv_ocr.data[0].textAnnotations[0].description (more specific)
-          .then(async result=>{
-            let records=result.info.ocr.adv_ocr.data[0].textAnnotations[0].description
-            let newrecords=records.replace(/(\r\n|\n|\r)/gm, "");
-            let newpos= newrecords.replace(/-/g, "");
-            //let mystring=newpos.trim()
-            let mystring=newpos.split(" ").join("")
-            let dataget=mystring.slice(0,9)
-           if(!dataget){
-             res.send("Not fetch data correctly")
-           }
-
-           let record=await Records.findOne({registrationnumber:dataget})
-           console.log(record)
-          if(!record){
-               res.status(400).send("Not found Records in database")
-          }
-         else{
-              res.send(record)
-          }
-        
-          
-        
-
-        
-        })
-
-  }); 
 
 //post a challan
 router.post("/add",async(req,res)=>{
@@ -276,8 +212,12 @@ router.post("/add",async(req,res)=>{
     challan.wardenid=req.body.wardenid;
     challan.picid=req.body.imgid;
     challan.challanid=req.body.challanid;
-    await challan.save();
-    return res.send(challan);
+    challan.placename=req.body.place;
+   if(await challan.save()){ 
+    return res.send(challan)
+   }else{
+     return res.status(400).send('Error while sending a challan')
+   }
 });
 
 //get challans against specific warden id
@@ -360,12 +300,91 @@ console.log(req.body.challan)
       res.send(result)}).catch(err=>console.log(err))
     
    })
-  
-
-
 })
 
 
+//modemailer and sendgrid setup for sending mails
+const transporter=nodemailer.createTransport(sendgrid({
+  auth:{
+    api_key:"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"
+  }
+}))
+//padf file send via challan
+router.post('/pdfuploader',(req,res)=>{
+  const options = {
+    url:
+      "https://www.clickdimensions.com/links/TestPDFfile.pdf",
+   // dest: "C:/Users/USER/Desktop/final year project/myapp-master/public/images/hello.png",
+   dest: "./public/images/sample.pdf",
+
+    // will be saved to /path/to/dest/image.jpg
+  };
+     imageDownloader
+      .image(options)
+      .then((data) => {
+        console.log(data.filename)
+        /*console.log("file saved" + filename); */
+        fs.readFile(data.filename,function(err,data){
+          var mailOptions={
+          from:"fa17-bcs-003@cuilahore.edu.pk",
+          to:"aliumair.ajmal@gmail.com",
+          subject:'Sample mail',
+          text:'Hello!!!!!!!!!!!!!',
+          attachments:[
+          {
+              'filename':'my.pdf',//metion the filename with extension
+               'content': data,
+               'contentType':'application/pdf'//type indicates file type like pdf,jpg,...
+          }]
+          }
+          transporter.sendMail(mailOptions,function(err,res){
+          if(err){
+              console.log('Error');
+          }
+          else{
+          console.log('Email Sent');
+          }       
+       
+        })
+      })
+      })
+      .catch((err) => console.error(err));
+    })
+
+
+//console.log(req.files.file.path)
+  
+/*var base64File = encode.encode(req.files.file.path, 'base64');
+console.log(base64File)  */
+  
+    /*fs.readFile(req.files.file.path,function(err,data){
+      var mailOptions={
+      from:"fa17-bcs-003@cuilahore.edu.pk",
+      to:"aliumair.ajmal@gmail.com",
+      subject:'Sample mail',
+      text:'Hello!!!!!!!!!!!!!',
+      attachments:[
+      {
+          'filename':'sample.pdf',//metion the filename with extension
+           'content': data,
+           'contentType':'application/pdf'//type indicates file type like pdf,jpg,...
+      }]
+      }
+      transporter.sendMail(mailOptions,function(err,res){
+      if(err){
+          console.log('Error');
+      }
+      else{
+      console.log('Email Sent');
+      }
+  
+ 
+     
+   
+    })
+  })*/
+
+ /*
 //payment module
 router.post("/payment",async(req,res)=>{
   
@@ -407,50 +426,7 @@ router.post("/payment",async(req,res)=>{
 
   
 });
-
-//modemailer and sendgrid setup for sending mails
-const transporter=nodemailer.createTransport(sendgrid({
-  auth:{
-    api_key:"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"
-  }
-}))
-
-
-//padf file send via challan
-router.post('/pdfuploader',multipartMiddleware,(req,res)=>{
-console.log(req.files.file.path)
-  
-/*var base64File = encode.encode(req.files.file.path, 'base64');
-console.log(base64File) */
-  
-    fs.readFile(req.files.file.path,function(err,data){
-      var mailOptions={
-      from:"fa17-bcs-003@cuilahore.edu.pk",
-      to:"aliumair.ajmal@gmail.com",
-      subject:'Sample mail',
-      text:'Hello!!!!!!!!!!!!!',
-      attachments:[
-      {
-          'filename':'sample.pdf',//metion the filename with extension
-           'content': data,
-           'contentType':'application/pdf'//type indicates file type like pdf,jpg,...
-      }]
-      }
-      transporter.sendMail(mailOptions,function(err,res){
-      if(err){
-          console.log('Error');
-      }
-      else{
-      console.log('Email Sent');
-      }
-  
- 
-     
-   
-    })
-  })
-
-})
+*/ 
 
 /*
 router.post('/upsdowns',async(req,res)=>{
@@ -479,7 +455,7 @@ console.log(text);
 
 
 //post a challan 
-router.post("/newpost" ,async function(req, res) {
+/*router.post("/newpost" ,async function(req, res) {
   const options = {
     url:
       "https://res.cloudinary.com/ali7347/image/upload/v1619260469/vehicleimage_qeuko8.jpg",
@@ -523,14 +499,14 @@ router.post("/newpost" ,async function(req, res) {
      
    
 });
+*/
 
-
-router.post("/newch" ,async function(req, res) {
+/*router.post("/newch" ,async function(req, res) {
   let link=req.body.link
   const options = {
     url:
       link,
-    dest: "./images/hello.png"
+    dest: ".images/hello.png"
     // will be saved to /path/to/dest/image.jpg
   };
   
@@ -552,10 +528,10 @@ router.post("/newch" ,async function(req, res) {
       }) 
       
    
-});
+});*/
 
 
-router.post("/tesscartimage",multipartMiddleware,(req,res)=>{
+/*router.post("/tesscartimage",multipartMiddleware,(req,res)=>{
   console.log(req.files.null.path)
   Tesseract.recognize(
     req.files.null.path,
@@ -569,5 +545,234 @@ router.post("/tesscartimage",multipartMiddleware,(req,res)=>{
 
 
 })
+*/
+//use tesseract.js
+/*router.post('/ups',multipartMiddleware,(req,res)=>{
+  console.log(req.files.image.path)
+
+  Tesseract.recognize(req.files.image.path)
+      .then(function(result) {
+        console.log(result.data.text)
+       res.send(result.data.text);
+      });
+  
+
+})*/
+
+
+//var imageFile = Buffer.from(fs.readFileSync("C:\\temp\\inputfile").buffer); // File | Image file to perform the operation on.  Common file formats such as PNG, JPEG are supported.
+/*var callback = function(error, data, response) {
+  if (error) {
+    console.error(error);
+  } else {
+    console.log('API called successfully. Returned data: ' + data);
+  }
+};
+
+*/
+
+/*router.get('/alirouter',(req,res)=>{
+  console.log(req.body.link)
+  let link=req.body.link
+    
+    
+      
+  Jimp.read(link)
+  .then(image => {
+    // Do stuff with the image.
+    return image
+//.autocrop(leaveBorder)
+.resize(250,Jimp.AUTO)
+.resize(Jimp.AUTO,250)
+
+// resize
+ 
+.sepia() 
+.greyscale() // set greyscale
+
+.posterize(200)
+// .mask( src, x, y )
+.contrast(0.2)
+.color([
+  { apply: 'red', params: [50] },
+  {apply: 'green', params: [50] },
+  {apply: 'blue', params: [50] },
+ // {apply: 'shade', params: [100] },
+  //{apply: 'tint', params: [50] },
+])
+
+
+.background(0x00000000)
+//.fade( 0.25)
+//.resize(Jimp.AUTO,250)
+//.resize(250,Jimp.AUTO)
+
+.normalize()
+.sepia() 
+.write('./images/process'+count+'.png').then(data=>console.log(data)) // save
+  })
+  .catch(err => {
+    // Handle an exception.
+    console.error(err);
+  });
+
+})
+//this is dummy for tesscart
+/*router.get('/myrouter', function(req, res, next) {
+  fs.unlink('./images/process'+count+'.png', (err) => {
+    if (err) {
+        throw err;
+    }
+
+    console.log("File is deleted.");
+})
+  let link=req.body.link
+    
+    
+      
+        Jimp.read(link)
+        .then(image => {
+          // Do stuff with the image.
+          return image
+      //.autocrop(leaveBorder)
+      .resize(250,Jimp.AUTO)
+      .resize(Jimp.AUTO,250)
+      
+      // resize
+       
+      .sepia() 
+      .greyscale() // set greyscale
+     
+      .posterize(200)
+     // .mask( src, x, y )
+     .contrast(0.2)
+      .color([
+        { apply: 'red', params: [50] },
+        {apply: 'green', params: [50] },
+        {apply: 'blue', params: [50] },
+       // {apply: 'shade', params: [100] },
+        //{apply: 'tint', params: [50] },
+      ])
+     
+     
+      .background(0x00000000)
+     //.fade( 0.25)
+     //.resize(Jimp.AUTO,250)
+     //.resize(250,Jimp.AUTO)
+     
+     .normalize()
+    .sepia() 
+     .write('./images/process'+count+'.png')
+        })
+        .catch(err => {
+          // Handle an exception.
+          console.error(err);
+        });
+        var path='./images/process'+count+'.png'
+        function myFunc() {
+          Tesseract.recognize(
+            './images/process'+count+'.png',
+            'eng',
+            { logger: m => console.log(m) }
+          ).then(({ data: { text } }) => {
+            console.log(text);
+            res.send('respond with a resource');
+           count++
+          }) 
+        }
+        
+        setTimeout(myFunc, 1500);
+   
+        
+      
+});*/
+
+
+/*
+//get the records against the photo of vehicle
+router.post('/uploader',multipartMiddleware,async(req, res)=> {
+    //req.files.image.path
+    //req.body.url
+   // console.log(req.body)
+    console.log(req.files.file.path)
+    cloudinary.v2.uploader.upload(req.files.file.path,
+      {
+        ocr: "adv_ocr"
+      }, function(error, result) {
+          if( result.info.ocr.adv_ocr.status === "complete" ) {
+            let records=result.info.ocr.adv_ocr.data[0].textAnnotations[0].description
+            console.log(records)
+            let newrecords=records.replace(/(\r\n|\n|\r)/gm, "");
+            let newpos= newrecords.replace(/-/g, "");
+            //let mystring=newpos.trim()
+            let mystring=newpos.split(" ").join("")
+            let dataget=mystring.slice(0,9)
+            console.log(dataget)
+            res.send(dataget)
+           
+            
+
+           
+           // let cnicrecord=result.info.ocr.adv_ocr.data[0].textAnnotations[0].description // result.info.ocr.adv_ocr.data[0].textAnnotations[0].description (more specific)
+          }
+        })
+     
+         // let records=await Records.findOne({registrationnumber:postrecords})
+         // if(!records){
+         //      res.status(400).send("Not found Records in database")
+         // }
+         // else{
+           //   res.send(records)
+         // }
+        
+
+        
+    
+
+  }); 
+  ////////////////////////
+//this will get result from cloudinary all data will get by ocr
+  router.post('/uploads',async(req, res)=> {
+    //req.files.image.path
+    //req.body.photo
+    
+    console.log(req.body.photo)
+    cloudinary.v2.uploader.upload(req.body.photo,
+      {
+        ocr: "adv_ocr"
+      }, function(error, result) {
+          
+          if( result.info.ocr.adv_ocr.status === "complete" ) { 
+            
+          }
+        })
+         
+          .then(async result=>{
+            let records=result.info.ocr.adv_ocr.data[0].textAnnotations[0].description
+            let newrecords=records.replace(/(\r\n|\n|\r)/gm, "");
+            let newpos= newrecords.replace(/-/g, "");
+            //let mystring=newpos.trim()
+            let mystring=newpos.split(" ").join("")
+            let dataget=mystring.slice(0,9)
+           if(!dataget){
+             return res.status(400).send("Not fetch data correctly")
+           }
+
+           let record=await Records.findOne({registrationnumber:dataget})
+           console.log(record)
+          if(!record){
+              return res.status(401).send("Not found Records in database")
+          }
+         else{
+             return  res.send(record)
+          }
+        
+          
+        
+
+        
+        })
+
+  }); */ 
 
 module.exports=router;
