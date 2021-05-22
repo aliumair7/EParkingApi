@@ -17,7 +17,7 @@ router.get("/",async(req,res)=>{
 router.get('/:idcardnumber' ,async (req,res)=>
 {
     try{
-            let user= await Users.find({idcardnumber:req.body.idcardnumber})
+            let user= await Users.findOne({idcardnumber:req.params.idcardnumber})
             if(!user)
             {
                 return res.status(400).send("User is not present");
@@ -78,6 +78,21 @@ router.post("/login", async (req, res) => {
       { _id: user._id, name: user.name, gmail: user.email,cnic:user.idcardnumber,mobile:user.phonenumber },"someprivatekey");
     res.send(token);
   });
+
+  //update citizen aginst specfic wardenid
+  router.put('/update/:id',async(req,res)=>{
+    
+    let citizen=await Users.findOne({idcardnumber:req.params.id})
+    citizen.name=req.body.name;
+    citizen.fathername=req.body.fathername;
+    citizen.password=req.body.password;
+    citizen.email=req.body.gmail;
+    citizen.phonenumber=req.body.phnumber;
+    
+    await citizen.save();
+    res.send("Updated succuessfully")
+
+  })
 
   //payment module
   /*
