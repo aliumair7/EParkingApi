@@ -26,7 +26,7 @@ function validatewarden(data)
        name: Joi.string().min(3).max(30).required(),
        fathername: Joi.string().min(3).max(30).required(),
         password: Joi.string().min(3).max(10).required(),
-        wardenid: Joi.string().length(13).pattern(/^[0-9]+$/).required(),
+        wardenid: Joi.number().required(),
      
       
     });

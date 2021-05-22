@@ -5,6 +5,7 @@ var bcrypt = require("bcryptjs");
 const _ = require("lodash");
 const jwt = require("jsonwebtoken");
 const wardenvalidator=require('../../middlewares/WardenValidator')
+var Keys=require("../../models/licenskeys")
 const { Router } = require('express');
 
 
@@ -13,6 +14,16 @@ router.get("/",async(req,res)=>{
     let warden=await Wardens.find();
     return res.send(warden);
 });
+
+//post keys by admin for warden
+router.post("/addkey",async(req,res)=>{
+  console.log(req.body)
+  let keys=new Keys()
+  keys.wardenid=req.body.wardenid
+  await keys.save()
+  return res.send(keys)
+
+})
 //get warden bagainst his  wardenid
 router.get("/:wardenid",async(req,res)=>{
    try
@@ -37,11 +48,12 @@ router.get("/:wardenid",async(req,res)=>{
 });
 // register warden with required fields
 router.post("/register",wardenvalidator,async(req,res)=>{
-    
+    let wardenkey=await Keys.findOne({ wardenid:req.body.wardenid})
+    if(!wardenkey){return res.status("400").send("Your Given ID not registered on this app")}
     let warden = await Wardens.findOne({wardenid:req.body.wardenid});
-    if (warden) {return res.status("400").send("Warden exists aalready with given wardenid ")}
+    if (warden) {return res.status("401").send("Warden exists aalready with given wardenid ")}
     if(!req.body.name || !req.body.fathername || !req.body.wardenid || !req.body.password){
-      return res.status("401").send("Fill all fields")
+      return res.status("402").send("Fill all fields")
     }
   
       let newwarden=new Wardens()
