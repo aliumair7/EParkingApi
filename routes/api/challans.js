@@ -28,13 +28,7 @@ var count=1;
 /* GET users listing. */
 router.post('/getrecords', function(req, res, next) {
   console.log(req.body)
-  fs.unlink('./images/process'+count+'.png', (err) => {
-    if (err) {
-        throw err;
-    }
-
-    console.log("File is deleted.");
-})
+  
   let link=req.body.link
         Jimp.read(link)
         .then(image => {

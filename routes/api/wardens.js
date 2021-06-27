@@ -17,7 +17,11 @@ router.get("/",async(req,res)=>{
 
 //post keys by admin for warden
 router.post("/addkey",async(req,res)=>{
-  console.log(req.body)
+  console.log(req.body.wardenid)
+  let key=await Keys.findOne({wardenid: req.body.wardenid});
+  if(key){
+    return res.status(400).send("Id is already registered on App");
+  }
   let keys=new Keys()
   keys.wardenid=req.body.wardenid
   await keys.save()
