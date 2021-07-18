@@ -18,9 +18,10 @@ router.get("/",async(req,res)=>{
 //post keys by admin for warden
 router.post("/addkey",async(req,res)=>{
   console.log(req.body.wardenid)
+  if(!req.body.wardenid ) return res.status(400).send("Fill id field")
   let key=await Keys.findOne({wardenid: req.body.wardenid});
   if(key){
-    return res.status(400).send("Id is already registered on App");
+    return res.status(401).send("Id is already registered on App");
   }
   let keys=new Keys()
   keys.wardenid=req.body.wardenid
@@ -28,6 +29,22 @@ router.post("/addkey",async(req,res)=>{
   return res.send(keys)
 
 })
+
+//update warden password aginst specfic wardenid
+router.put('/updatepassword',async(req,res)=>{
+  console.log(req.body)
+    
+  let wardens=await Wardens.findOne({wardenid:req.body.id})
+  if (!wardens) return res.status(401).send("Warden Not Registered");
+ 
+  
+  wardens.password=req.body.password;
+        await wardens.generateHashedPassword();
+  await wardens.save();
+  res.send("Password Change  succuessfully")
+
+})
+
 //get warden bagainst his  wardenid
 router.get("/:wardenid",async(req,res)=>{
    try
@@ -105,4 +122,6 @@ router.post("/login", async (req, res) => {
     res.send("Updated succuessfully")
 
   })
+
+
 module.exports=router;

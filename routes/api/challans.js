@@ -16,12 +16,20 @@ var sendgrid=require('nodemailer-sendgrid-transport')
 
 const multipartMiddleware = multipart();
 
-//Cloudinary set up
+// Cloudinary set up
 cloudinary.config({
   cloud_name: 'ali7347',
   api_key: '431387519785511',
   api_secret: '8hvc3XL2nB2V24AdhxOUKVG7CO4'
 });
+
+
+// Cloudinary set up
+// cloudinary.config({
+//   cloud_name: 'doo80wqla',
+//   api_key: '465737177241793',
+//   api_secret: 'ecJjCOPhpNVLzBBj7-HLtSx71DM'
+// });
 
 
 var count=1;
@@ -72,29 +80,37 @@ router.post('/getrecords', function(req, res, next) {
           {
             ocr: "adv_ocr"
           }, function(error, result) {
+            if(!result){
+              console.log('no clear image here')
+              return res.status(400).send("Image was not capture clear")
+            }
               
-              if( !result.info.ocr.adv_ocr.status === "complete" ) { 
-
+              if( result && !result.info.ocr.adv_ocr.status === "complete" ) { 
+                        console.log('data has not fetch correctly here.....')
                 
               }
             })
              
               .then(async result=>{
-                let records=result.info.ocr.adv_ocr.data[0].textAnnotations[0].description
+                if(!result){
+                  console.log('no here data found')
+                }
+                let records=result && result.info.ocr.adv_ocr.data[0].textAnnotations[0].description
                 console.log(records)
                 let newrecords=records.replace(/(\r\n|\n|\r)/gm, "");
                 let newpos= newrecords.replace(/-/g, "");
                 //let mystring=newpos.trim()
                 let mystring=newpos.split(" ").join("")
                 let dataget=mystring.slice(0,9)
+                console.log('number plate ...........',dataget)
                if(!dataget){
-                 return res.status(400).send("Not fetch data correctly")
+                 return res.status(401).send("Not fetch data correctly")
                }
     
                let record=await Records.findOne({registrationnumber:dataget})
                console.log(record)
               if(!record){
-                  return res.status(401).send("Not found Records in database")
+                  return res.status(402).send("Not found Records in database")
               }
              else{
                  return  res.send(record)
@@ -303,47 +319,67 @@ const transporter=nodemailer.createTransport(sendgrid({
     api_key:"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"
   }
 }))
-//padf file send via challan
-router.post('/pdfuploader',(req,res)=>{
-  const options = {
-    url:
-      "https://www.clickdimensions.com/links/TestPDFfile.pdf",
-   // dest: "C:/Users/USER/Desktop/final year project/myapp-master/public/images/hello.png",
-   dest: "./public/images/sample.pdf",
 
-    // will be saved to /path/to/dest/image.jpg
-  };
-     imageDownloader
-      .image(options)
-      .then((data) => {
-        console.log(data.filename)
-        /*console.log("file saved" + filename); */
-        fs.readFile(data.filename,function(err,data){
-          var mailOptions={
-          from:"fa17-bcs-003@cuilahore.edu.pk",
-          to:"aliumair.ajmal@gmail.com",
-          subject:'Sample mail',
-          text:'Hello!!!!!!!!!!!!!',
-          attachments:[
-          {
-              'filename':'my.pdf',//metion the filename with extension
-               'content': data,
-               'contentType':'application/pdf'//type indicates file type like pdf,jpg,...
-          }]
-          }
-          transporter.sendMail(mailOptions,function(err,res){
-          if(err){
-              console.log('Error');
-          }
-          else{
-          console.log('Email Sent');
-          }       
+
+router.post('/sendmail',(req,res)=>{
+  var mailOptions={
+              from:"fa17-bcs-003@cuilahore.edu.pk",
+              to:"aliumair.ajmal@gmail.com",
+              subject:'Sample mail',
+              text:'Hello!!!!!!!!!!!!!',
+              }
+              transporter.sendMail(mailOptions,function(err,res){
+              if(err){
+                  console.log('Error');
+              }
+              else{
+              console.log('Email Sent');
+              
+         }     
+
+})
+})
+//padf file send via challan
+// router.post('/pdfuploader',(req,res)=>{
+//   const options = {
+//     url:
+//       "https://www.clickdimensions.com/links/TestPDFfile.pdf",
+//    // dest: "C:/Users/USER/Desktop/final year project/myapp-master/public/images/hello.png",
+//    dest: "./public/images/sample.pdf",
+
+//     // will be saved to /path/to/dest/image.jpg
+//   };
+//      imageDownloader
+//       .image(options)
+//       .then((data) => {
+//         console.log(data.filename)
+//         /*console.log("file saved" + filename); */
+//         fs.readFile(data.filename,function(err,data){
+//           var mailOptions={
+//           from:"fa17-bcs-003@cuilahore.edu.pk",
+//           to:"fa17-bcs-147@cuilahore.edu.pk",
+//           subject:'Sample mail',
+//           text:'Hello!!!!!!!!!!!!!',
+//           attachments:[
+//           {
+//               'filename':'my.pdf',//metion the filename with extension
+//                'content': data,
+//                'contentType':'application/pdf'//type indicates file type like pdf,jpg,...
+//           }]
+//           }
+//           transporter.sendMail(mailOptions,function(err,res){
+//           if(err){
+//               console.log('Error');
+//           }
+//           else{
+//           console.log('Email Sent');
+//           }       
        
-        })
-      })
-      })
-      .catch((err) => console.error(err));
-    })
+//         })
+//       })
+//       })
+//       .catch((err) => console.error(err));
+//     })
 
 
 //console.log(req.files.file.path)

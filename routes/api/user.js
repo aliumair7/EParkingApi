@@ -59,6 +59,7 @@ router.post("/register",citizenvalidater,async(req,res)=>{
             { _id: newuser._id, name: newuser.name, role: newuser.role },"someprivatekey");
           let datareturn = {
             name: newuser.firstname,
+ 
             email: newuser.email,
             token: newuser.token,
           };
@@ -66,6 +67,21 @@ router.post("/register",citizenvalidater,async(req,res)=>{
     
     
 });
+
+ //update citizen password aginst specfic wardenid
+ router.put('/updatepassword',async(req,res)=>{
+    console.log(req.body)
+  let citizen=await Users.findOne({idcardnumber:req.body.id})
+  if (!citizen) return res.status(401).send("Citizen Not Registered");
+  citizen.password=req.body.password;
+  await citizen.generateHashedPassword();
+  
+  
+  await citizen.save();
+  res.send("Updated succuessfully")
+
+})
+
 
 //login citizen with required field and generate tokem
 router.post("/login", async (req, res) => {
